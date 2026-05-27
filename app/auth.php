@@ -37,6 +37,29 @@ function attempt_admin_login(string $username, string $password): bool
     return true;
 }
 
+function attempt_admin_login_by_email(string $email): bool
+{
+    $stmt = db()->prepare('SELECT id, username, display_name FROM admins WHERE email = ? AND is_active = 1 LIMIT 1');
+    $stmt->execute([$email]);
+    $admin = $stmt->fetch();
+
+    if (!$admin) {
+        return false;
+    }
+
+    session_regenerate_id(true);
+    $_SESSION['admin'] = [
+        'id' => (int) $admin['id'],
+        'username' => $admin['username'],
+        'display_name' => $admin['display_name'],
+    ];
+
+    $update = db()->prepare('UPDATE admins SET last_login_at = NOW() WHERE id = ?');
+    $update->execute([$admin['id']]);
+
+    return true;
+}
+
 function logout_admin(): void
 {
     $_SESSION = [];

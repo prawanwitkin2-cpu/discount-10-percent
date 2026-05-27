@@ -6,12 +6,10 @@ require_once BASE_PATH . '/app/Services/GoogleAuthService.php';
 class GoogleAuthController
 {
     private GoogleAuthService $googleService;
-    private PDO $db;
 
     public function __construct()
     {
         $this->googleService = new GoogleAuthService();
-        $this->db = db();
     }
 
     public function redirect(): void
@@ -23,62 +21,25 @@ class GoogleAuthController
 
     public function handleCallback(string $code): void
     {
-        $userInfo = $this->googleService->authenticate($code);
-
-        if (!$userInfo) {
-            $_SESSION['error'] = 'Failed to authenticate with Google.';
-            header('Location: /');
-            exit;
+        $profile = $this->googleService->authenticateAndGetProfile($code);
+        
+        if (!$profile) {
+            $_SESSION['login_error'] = 'เกิดข้อผิดพลาดในการดึงข้อมูลจาก Google';
+            redirect('/admin/login.php');
+            return;
         }
 
-        $user = $this->findOrCreateUser($userInfo);
+        $email = $profile['email'];
         
-        // Update last_login_at
-        $stmt = $this->db->prepare("UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?");
-        $stmt->execute([$user['id']]);
-
-        // Set session
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['user_name'] = $user['name'];
-        $_SESSION['department_id'] = $user['department_id']; // Can be null if new
-        
-        header('Location: /');
-        exit;
-    }
-
-    private function findOrCreateUser(array $userInfo): array
-    {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$userInfo['email']]);
-        $user = $stmt->fetch();
-
-        if ($user) {
-            // Update profile picture and name if they changed
-            $updateStmt = $this->db->prepare("UPDATE users SET name = ?, profile_picture = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $updateStmt->execute([$userInfo['name'], $userInfo['picture'], $user['id']]);
-            return $user;
+        // Check if this email is an admin
+        if (attempt_admin_login_by_email($email)) {
+            // Login successful
+            redirect('/admin/dashboard.php');
+            return;
         }
 
-        // Register new user
-        $insertStmt = $this->db->prepare("
-            INSERT INTO users (google_id, email, name, profile_picture) 
-            VALUES (?, ?, ?, ?)
-        ");
-        $insertStmt->execute([
-            $userInfo['google_id'],
-            $userInfo['email'],
-            $userInfo['name'],
-            $userInfo['picture']
-        ]);
-        
-        $newUserId = (int) $this->db->lastInsertId();
-        
-        return [
-            'id' => $newUserId,
-            'google_id' => $userInfo['google_id'],
-            'email' => $userInfo['email'],
-            'name' => $userInfo['name'],
-            'department_id' => null
-        ];
+        // Login failed (Not an admin)
+        $_SESSION['login_error'] = "อีเมลนี้ ($email) ไม่มีสิทธิ์เข้าใช้งานระบบแอดมิน";
+        redirect('/admin/login.php');
     }
 }

@@ -1,39 +1,27 @@
 <?php
 
 require __DIR__ . '/app/bootstrap.php';
-require __DIR__ . '/app/csrf.php';
 
 $departmentNames = list_active_department_names();
 $errors = [];
 $success = false;
 
-$isLoggedIn = isset($_SESSION['user_id']);
-$userName = $_SESSION['user_name'] ?? '';
-$userDepartmentId = $_SESSION['department_id'] ?? null;
-$defaultDepartmentName = '';
-
-if ($userDepartmentId) {
-    $stmt = db()->prepare("SELECT name FROM departments WHERE id = ?");
-    $stmt->execute([$userDepartmentId]);
-    $defaultDepartmentName = (string) $stmt->fetchColumn();
-}
-
 $old = [
-    'department_name' => $defaultDepartmentName,
+    'nickname' => '',
+    'department_name' => '',
     'branch_name' => '',
     'hot_cups' => 0,
     'cold_cups' => 0,
     'pdpa_accepted' => false,
 ];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isLoggedIn) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         die('Invalid CSRF Token');
     }
 
     $old = [
-        'user_id' => $_SESSION['user_id'],
-        'user_name' => $userName,
+        'nickname' => input_string('nickname', 80),
         'department_name' => input_string('department_name', 120),
         'branch_name' => input_string('branch_name', 120),
         'hot_cups' => input_int('hot_cups'),
@@ -48,10 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isLoggedIn) {
     if (!$errors) {
         create_discount_record($old);
         $success = true;
-        // Reset form except department
-        $old['branch_name'] = '';
-        $old['hot_cups'] = 0;
-        $old['cold_cups'] = 0;
+        $old = [
+            'nickname' => '',
+            'department_name' => '',
+            'branch_name' => '',
+            'hot_cups' => 0,
+            'cold_cups' => 0,
+        ];
     }
 }
 ?>
@@ -77,18 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isLoggedIn) {
       <?php if ($errors): ?>
         <div class="notice error">กรุณาตรวจสอบข้อมูลให้ครบถ้วน</div>
       <?php endif; ?>
-
-      <?php if (!$isLoggedIn): ?>
-        <div class="login-prompt" style="text-align: center; margin-top: 2rem;">
-            <p style="margin-bottom: 1rem; color: #555;">กรุณาเข้าสู่ระบบด้วยบัญชี Google ของคุณเพื่อบันทึกสิทธิ์</p>
-            <a href="/auth/google-login.php" class="button" style="display: inline-block; background-color: #4285F4; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                <i class="fa-brands fa-google" style="margin-right: 8px;"></i> Login with Google
-            </a>
-        </div>
-      <?php else: ?>
-          <div class="user-greeting" style="text-align: center; margin-bottom: 1rem; color: #6d4c41; font-weight: 500;">
-              สวัสดีคุณ <?= h($userName) ?> 
-          </div>
 
           <form method="post" class="stepper-form" data-stepper-form>
             <?= csrfField() ?>
@@ -126,6 +105,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isLoggedIn) {
 
             <section class="step" data-step="1">
               <h2>ฟอร์ม</h2>
+              <label>
+                <span>ชื่อเล่น</span>
+                <input type="text" name="nickname" maxlength="80" value="<?= h($old['nickname']) ?>" required>
+              </label>
+              <?php if (isset($errors['nickname'])): ?><p class="field-error"><?= h($errors['nickname']) ?></p><?php endif; ?>
+
               <label>
                 <span>สำนัก</span>
                 <input type="text" name="department_name" list="department-options" maxlength="120" value="<?= h($old['department_name']) ?>" autocomplete="off" required>
@@ -165,7 +150,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isLoggedIn) {
               <button type="submit" data-submit hidden>บันทึกข้อมูล</button>
             </div>
           </form>
-      <?php endif; ?>
       <?php if ($success): ?>
         <div id="save-success-flag" data-save-success="1" hidden></div>
       <?php endif; ?>

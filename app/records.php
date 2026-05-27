@@ -26,8 +26,8 @@ function validate_discount_payload(array $payload): array
 {
     $errors = [];
 
-    if (empty($payload['user_id'])) {
-        $errors['auth'] = 'กรุณาเข้าสู่ระบบก่อนทำรายการ';
+    if (empty($payload['nickname'])) {
+        $errors['nickname'] = 'กรุณากรอกชื่อเล่น';
     }
     if ($payload['department_name'] === '') {
         $errors['department_name'] = 'กรุณากรอกสำนัก';
@@ -52,22 +52,15 @@ function create_discount_record(array $payload): void
 {
     $departmentId = resolve_department_id_by_name($payload['department_name']);
     $branchId = resolve_allowed_branch_id_by_name($payload['branch_name']);
-    $userId = (int) $payload['user_id'];
-
-    // Update user's department_id for next time
-    $updUser = db()->prepare("UPDATE users SET department_id = ? WHERE id = ?");
-    $updUser->execute([$departmentId, $userId]);
-    $_SESSION['department_id'] = $departmentId;
 
     $stmt = db()->prepare(
         'INSERT INTO discount_records
-        (user_id, nickname, department_id, branch_id, hot_cups, cold_cups, delivery_count, pdpa_accepted, created_ip, user_agent, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+        (nickname, department_id, branch_id, hot_cups, cold_cups, delivery_count, pdpa_accepted, created_ip, user_agent, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
     );
 
     $stmt->execute([
-        $userId,
-        $payload['user_name'] ?? '',
+        $payload['nickname'],
         $departmentId,
         $branchId,
         $payload['hot_cups'],
