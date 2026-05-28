@@ -17,32 +17,35 @@ $old = [
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-        die('Invalid CSRF Token');
-    }
-
-    $old = [
-        'nickname' => input_string('nickname', 80),
-        'department_name' => input_string('department_name', 120),
-        'branch_name' => input_string('branch_name', 120),
-        'hot_cups' => input_int('hot_cups'),
-        'cold_cups' => input_int('cold_cups'),
-        'pdpa_accepted' => isset($_POST['pdpa_accepted']),
-        'created_ip' => substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45),
-        'user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255),
-    ];
-
-    $errors = validate_discount_payload($old);
-
-    if (!$errors) {
-        create_discount_record($old);
-        $success = true;
+        $errors['csrf'] = 'เซสชันหมดอายุ (Session Expired) หรือโทเคนไม่ถูกต้อง กรุณากดปุ่ม "บันทึกข้อมูล" อีกครั้งเพื่อลองใหม่';
+        // สร้าง Token ใหม่เพื่อไม่ให้มันค้าง
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    } else {
         $old = [
-            'nickname' => '',
-            'department_name' => '',
-            'branch_name' => '',
-            'hot_cups' => 0,
-            'cold_cups' => 0,
+            'nickname' => input_string('nickname', 80),
+            'department_name' => input_string('department_name', 120),
+            'branch_name' => input_string('branch_name', 120),
+            'hot_cups' => input_int('hot_cups'),
+            'cold_cups' => input_int('cold_cups'),
+            'pdpa_accepted' => isset($_POST['pdpa_accepted']),
+            'created_ip' => substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45),
+            'user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255),
         ];
+
+        $errors = validate_discount_payload($old);
+
+        if (!$errors) {
+            create_discount_record($old);
+            $success = true;
+            $old = [
+                'nickname' => '',
+                'department_name' => '',
+                'branch_name' => '',
+                'hot_cups' => 0,
+                'cold_cups' => 0,
+                'pdpa_accepted' => false, // keep it false for new entry
+            ];
+        }
     }
 }
 ?>
@@ -54,6 +57,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Discount 10 Percent</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="/public/assets/css/app.css">
+  <style>
+    .fade-out {
+      animation: fadeOut 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .fade-in {
+      animation: fadeIn 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-10px); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body class="cafe-public">
   <div class="floating-cafe-bg" aria-hidden="true"></div>
@@ -66,24 +88,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <?php if ($errors): ?>
-        <div class="notice error">กรุณาตรวจสอบข้อมูลให้ครบถ้วน</div>
+        <div class="notice error">
+          <?= isset($errors['csrf']) ? h($errors['csrf']) : 'กรุณาตรวจสอบข้อมูลให้ครบถ้วน' ?>
+        </div>
       <?php endif; ?>
 
-          <form method="post" class="stepper-form" data-stepper-form>
+          <form method="post" class="stepper-form" data-stepper-form data-start-step="<?= $errors ? '1' : '0' ?>">
             <?= csrfField() ?>
 
-            <ol class="steps" aria-label="ขั้นตอนการบันทึก">
-              <li class="active" data-step-indicator="0">
-                <span class="step-number">1</span>
-                <span class="step-label">PDPA</span>
-              </li>
-              <li data-step-indicator="1">
-                <span class="step-number">2</span>
-                <span class="step-label">ฟอร์ม</span>
-              </li>
-            </ol>
 
-            <section class="step active" data-step="0">
+            <section class="step active" id="step-0" data-step="0">
               <div class="pdpa-notice muted">
                 <p class="pdpa-title">ประกาศแจ้งการเก็บ ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล*</p>
                 <p>สำหรับผู้ใช้บริการระบบรับส่วนลด ร้านกาแฟ Koonie CAFE</p>
@@ -133,21 +147,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <?php if (isset($errors['branch_name'])): ?><p class="field-error"><?= h($errors['branch_name']) ?></p><?php endif; ?>
               <div class="count-grid">
                 <label>
-                  <span><i class="fa-solid fa-fire text-orange-500" aria-hidden="true"></i> ร้อน (Hot)</span>
-                  <input type="number" name="hot_cups" min="0" step="1" inputmode="numeric" pattern="[0-9]*" value="<?= h($old['hot_cups']) ?>">
+                  <span><i class="fa-solid fa-fire" style="color:#f97316" aria-hidden="true"></i> ร้อน (Hot)</span>
+                  <input type="tel" name="hot_cups" inputmode="numeric" pattern="[0-9]*"
+                    placeholder="0"
+                    value="<?= ($old['hot_cups'] > 0) ? h($old['hot_cups']) : '' ?>"
+                    onfocus="this.select()">
                 </label>
                 <label>
-                  <span><i class="fa-solid fa-snowflake text-blue-500" aria-hidden="true"></i> เย็น (Ice)</span>
-                  <input type="number" name="cold_cups" min="0" step="1" inputmode="numeric" pattern="[0-9]*" value="<?= h($old['cold_cups']) ?>">
+                  <span><i class="fa-solid fa-snowflake" style="color:#60a5fa" aria-hidden="true"></i> เย็น (Ice)</span>
+                  <input type="tel" name="cold_cups" inputmode="numeric" pattern="[0-9]*"
+                    placeholder="0"
+                    value="<?= ($old['cold_cups'] > 0) ? h($old['cold_cups']) : '' ?>"
+                    onfocus="this.select()">
                 </label>
               </div>
               <?php if (isset($errors['cups'])): ?><p class="field-error"><?= h($errors['cups']) ?></p><?php endif; ?>
             </section>
 
-            <div class="actions">
-              <button type="button" class="secondary" data-prev hidden><- ย้อนกลับ</button>
-              <button type="button" data-next>ถัดไป -></button>
-              <button type="submit" data-submit hidden>บันทึกข้อมูล</button>
+            <div class="actions" hidden>
+              <!-- ย้อนกลับไว้ซ้าย -->
+              <button type="button" class="secondary" data-prev hidden aria-label="ย้อนกลับ"><i class="fa-solid fa-arrow-left"></i></button>
+              <!-- บันทึกไว้ขวา -->
+              <button type="submit" data-submit hidden aria-label="บันทึกข้อมูล"><i class="fa-solid fa-floppy-disk"></i></button>
             </div>
           </form>
       <?php if ($success): ?>

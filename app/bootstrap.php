@@ -34,13 +34,14 @@ ini_set('display_errors', $appConfig['debug'] ? '1' : '0');
 ini_set('log_errors', '1');
 ini_set('error_log', BASE_PATH . '/storage/logs/php-error.log');
 
-session_name($appConfig['session_name']);
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'httponly' => true,
-    'samesite' => 'Lax',
-]);
+// ใช้ค่าเริ่มต้นของ PHP Session เพื่อป้องกันปัญหาเบราว์เซอร์บล็อก Cookie
+// session_name($appConfig['session_name']);
+// session_set_cookie_params([
+//     'lifetime' => 0,
+//     'path' => '/',
+//     'httponly' => true,
+//     'samesite' => 'Lax',
+// ]);
 session_start();
 
 require BASE_PATH . '/app/helpers.php';

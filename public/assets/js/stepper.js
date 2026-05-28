@@ -166,30 +166,70 @@
   }
 
   function showStep(index) {
-    current = Math.max(0, Math.min(index, steps.length - 1));
-    steps.forEach((step, idx) => step.classList.toggle('active', idx === current));
+    const nextIndex = Math.max(0, Math.min(index, steps.length - 1));
+    // ไม่มี early-return เพื่อให้ finishShowStep ทำงานทุกครั้ง (รวมถึง step 0)
+
+    const currentStep = steps[current];
+    const nextStep = steps[nextIndex];
+
+    if (currentStep && currentStep.classList.contains('active') && current !== nextIndex) {
+      currentStep.classList.remove('active', 'fade-in');
+      currentStep.classList.add('fade-out');
+
+      setTimeout(() => {
+        currentStep.classList.remove('fade-out');
+        finishShowStep(nextIndex, nextStep);
+      }, 250);
+    } else {
+      finishShowStep(nextIndex, nextStep);
+    }
+  }
+
+  function finishShowStep(nextIndex, nextStep) {
+    current = nextIndex;
+    steps.forEach((step, idx) => {
+      step.classList.toggle('active', idx === current);
+      if (idx === current) {
+        step.classList.add('fade-in');
+      } else {
+        step.classList.remove('fade-in');
+      }
+    });
+
     indicators.forEach((item, idx) => {
       item.classList.toggle('active', idx === current);
       item.classList.toggle('completed', idx < current);
     });
-    prev.hidden = current === 0;
-    next.hidden = current === steps.length - 1;
-    submit.hidden = current !== steps.length - 1;
-    if (actions && steps[current]) {
-      steps[current].appendChild(actions);
+
+    // สั่งเซ็ตเฉพาะถ้า element นั้นมีอยู่ (guard null)
+    if (prev) prev.hidden = current === 0;
+    if (next) next.hidden = current === steps.length - 1;
+    if (submit) submit.hidden = current !== steps.length - 1;
+
+    // ซ่อนปุ่มทั้งหมดบนหน้า PDPA (step 0), แสดงเมื่อ step >= 1
+    if (actions) {
+      actions.hidden = current === 0;
+      if (steps[current]) {
+        steps[current].appendChild(actions);
+      }
     }
   }
 
-  prev.addEventListener('click', function () {
-    showStep(current - 1);
-  });
+  if (prev) {
+    prev.addEventListener('click', function () {
+      showStep(current - 1);
+    });
+  }
 
-  next.addEventListener('click', function () {
-    if (!validateCurrentStep()) {
-      return;
-    }
-    showStep(current + 1);
-  });
+  // ติ๊กถูก PDPA แล้วข้ามหน้าอัตโนมัติ
+  const pdpaCheckbox = form.querySelector('input[name="pdpa_accepted"]');
+  if (pdpaCheckbox) {
+    pdpaCheckbox.addEventListener('change', function () {
+      if (this.checked && current === 0) {
+        showStep(1);
+      }
+    });
+  }
 
   form.addEventListener('submit', function (e) {
     if (!validateFinalSubmit()) {
@@ -210,7 +250,8 @@
     });
   });
 
-  showStep(0);
+  const startStep = parseInt(form.dataset.startStep || '0', 10);
+  showStep(startStep);
 
   const successFlag = document.getElementById('save-success-flag');
   if (successFlag && successFlag.dataset.saveSuccess === '1') {

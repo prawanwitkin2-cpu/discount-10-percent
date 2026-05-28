@@ -1,44 +1,77 @@
-# Project Status
+# Project Status — Discount 10 Percent
 
-อัปเดตล่าสุด: 27 พฤษภาคม 2026
+อัปเดตล่าสุด: 27 พฤษภาคม 2026 เวลา 23:45
 
-## Current Focus
-ปรับปรุงโครงสร้างสถาปัตยกรรมโปรเจกต์เป็น MVC แบบ Native PHP และเพิ่มฟังก์ชัน Google OAuth Login ฝั่งผู้ใช้ทั่วไป พร้อม Audit Logs และระบบความปลอดภัย (เสร็จสิ้น Phase 1-6)
+---
 
-## Latest Progress
-- อนุมัติการใช้ Composer และติดตั้ง `google/apiclient` เรียบร้อยแล้ว (ผ่าน XAMPP PHP CLI)
-- สร้าง `.env` และตัวโหลดผ่าน `app/bootstrap.php` เพื่อดึงค่า API Keys และ DB Credentials
-- สร้างตาราง `users` (รองรับ Google Login) และ `admin_audit_logs` เรียบร้อยแล้ว
-- ย้าย/สร้างโครงสร้างโฟลเดอร์ MVC: `Controllers/`, `Services/`, `Repositories/`, `Middleware/`, `Views/` 
-- เพิ่ม `app/logger.php`, `app/csrf.php`, `app/validator.php` และทำการ Refactor โค้ดเดิมให้เชื่อมต่อด้วย
-- นำระบบ Login ด้วย Google มาใช้ที่หน้า Public (`index.php`) 
-  - ซ่อนแบบฟอร์มหากยังไม่ Login
-  - Auto-register ครั้งแรก
-  - บันทึก `user_id` ลงในตาราง `discount_records`
-  - หากผู้ใช้เลือกสำนัก ให้จำ `department_id` ไว้ที่ตาราง `users` ด้วย
-- ตรวจสอบความถูกต้องของ Admin Panel โดยให้ยังสามารถใช้งานและ Login ได้ด้วยตัวเองแบบเดิม แต่เพิ่ม Audit Logs เข้าไปตอนสร้าง/แก้/ลบ สำนัก
-- จัดการ `php -l` ทดสอบ Syntax และไม่พบ Error
+## โฟกัสปัจจุบัน
 
-## Files Modified
-- `.gitignore`
-- `.env` และ `.env.example`
-- `composer.json` และ `composer.lock`
-- `app/bootstrap.php`
-- `app/records.php`
-- `app/db.php`
-- `app/helpers.php`
-- `app/csrf.php`, `app/logger.php`, `app/validator.php`
-- `app/Controllers/GoogleAuthController.php`
-- `app/Services/GoogleAuthService.php`
-- `auth/google-login.php` และ `auth/google-callback.php`
-- `config/database.php`, `config/oauth.php`
-- `database/migrations/01_add_users_and_audit.sql`
-- `index.php`
+UX/UI Revamp เสร็จสมบูรณ์แล้ว  
+กำลังปรับปรุงความเสถียรของระบบในเครื่อง (localhost / XAMPP)
 
-## Testing Status
-- Syntax Check (ผ่าน `php -l`)
-- Database Import (ผ่าน)
+---
 
-## Immediate Next Steps
-1. ทดสอบยิง Google Login จริง (ต้องใส่ `GOOGLE_CLIENT_ID` และ `SECRET` ใน `.env`)
-2. เริ่มทำส่วนของ `admin/reports/` (Reports System) เพื่อ Export ข้อมูลสถิติตาม User ID (Phase ถัดไป)
+## สถานะล่าสุด
+
+### ✅ เสร็จสมบูรณ์แล้ว
+
+- โครงสร้าง MVC (Controllers, Services, Repositories) สร้างครบ
+- ระบบฐานข้อมูล: `admins`, `departments`, `branches`, `discount_records`, `admin_audit_logs`
+- ระบบ Admin Login ด้วย Google OAuth2 (GoogleAuthController, GoogleAuthService)
+- CSRF Token ทุกฟอร์ม POST (ทั้ง Public และ Admin)
+- Admin Panel: Dashboard, Records (ตาราง + filter), Reports (สถิติ), Departments (CRUD)
+- UX/UI Revamp ทั้งระบบ:
+  - ฟอนต์ Outfit จาก Google Fonts
+  - CSS Variables ปรับโทนสี premium
+  - Micro-animations (Slide-up Fade, Scale-up Fade, Hover effects)
+  - SVG Icons ในเมนู Admin
+  - Smooth transitions ในฟอร์ม Public (Stepper fade in/out)
+- Responsive: Desktop / Tablet (≤1024px) / Mobile (≤768px)
+- ปุ่มในฟอร์มปรับเป็น Icon เท่านั้น (ลบข้อความออก)
+- Input ร้อน/เย็น เปลี่ยนเป็น `type="tel"` เพื่อเด้ง Numpad บนมือถือ
+
+---
+
+## ไฟล์ที่แก้ไขล่าสุด (Session นี้)
+
+| ไฟล์ | สิ่งที่เปลี่ยน |
+|------|--------------|
+| `public/assets/css/app.css` | UX/UI Revamp ทั้งระบบ, ฟอนต์, สี, animations, responsive breakpoints |
+| `app/views/admin_nav.php` | เพิ่ม SVG Icons ทุกเมนู, Logout สีชมพู |
+| `index.php` | Smooth transitions, Icon buttons, `type="tel"` inputs, CSRF error handling graceful |
+| `public/assets/js/stepper.js` | Fade in/out transitions, `data-start-step` support |
+| `app/bootstrap.php` | ปลดล็อก session cookie params (แก้ปัญหา CSRF หมดอายุบน localhost) |
+| `database/` | เพิ่มสาขา `branches` และแก้ชื่อภาษาไทยที่ขึ้นเครื่องหมายคำถาม |
+
+---
+
+## Blockers / ปัญหาที่พบ
+
+### ⚠️ Google Login ยังไม่ได้ตั้งค่า
+- **สาเหตุ**: `.env` ยังไม่มี `GOOGLE_CLIENT_ID` และ `GOOGLE_CLIENT_SECRET`
+- **ผลกระทบ**: ฝั่ง Admin Login ด้วย Google ยังใช้งานไม่ได้
+- **วิธีแก้**: คุณต้องไปสร้าง OAuth Credentials ใน [Google Cloud Console](https://console.cloud.google.com/) แล้วนำ Client ID และ Client Secret มาใส่ใน `.env`
+- **ดูคู่มือ**: `GOOGLE_AUTH_SETUP.md`
+
+### ✅ แก้แล้ว: CSRF Token หมดอายุบน localhost
+- **อาการ**: หน้าขาว "Invalid CSRF Token" เวลา Submit ฟอร์ม
+- **สาเหตุ**: `session_set_cookie_params` ที่มี `samesite: Lax` บล็อก Cookie บน localhost browser บางตัว
+- **แก้**: คอมเมนต์ `session_set_cookie_params` ออกชั่วคราวในไฟล์ `app/bootstrap.php` และเพิ่ม Graceful CSRF error handling ใน `index.php`
+
+---
+
+## ขั้นตอนต่อไป (Next Steps)
+
+1. **ตั้งค่า Google Login**: ใส่ `GOOGLE_CLIENT_ID` และ `GOOGLE_CLIENT_SECRET` ใน `.env`
+2. **ทดสอบ End-to-End**: ทดสอบฟอร์ม Public, Login Admin, ดูสถิติ
+3. **เตรียม Production**: ตั้งค่า Server จริง, เปิด Session Cookie Security กลับ, เปลี่ยน `.env` ให้ตรงกับ Production
+4. **Phase 4 (Implementation Plan)**: พิจารณา Google Login สำหรับฝั่งผู้ใช้ทั่วไป (ปัจจุบันยังไม่มีการตรวจสอบสิทธิ์ฝั่งนี้ตามการออกแบบ)
+
+---
+
+## ไฟล์ชั่วคราวที่สร้าง (ต้องลบ)
+
+| ไฟล์ | สถานะ |
+|------|--------|
+| `test_session.php` | ✅ ลบแล้ว |
+| `fix_branches.php` | ✅ ลบแล้ว |

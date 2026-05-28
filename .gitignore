@@ -7,3 +7,4 @@ storage/logs/*
 vendor/
 composer.phar
 .gemini/
+test_session.php

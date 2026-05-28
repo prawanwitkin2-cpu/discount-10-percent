@@ -21,7 +21,7 @@ class GoogleAuthController
 
     public function handleCallback(string $code): void
     {
-        $profile = $this->googleService->authenticateAndGetProfile($code);
+        $profile = $this->googleService->authenticate($code);
         
         if (!$profile) {
             $_SESSION['login_error'] = 'เกิดข้อผิดพลาดในการดึงข้อมูลจาก Google';
