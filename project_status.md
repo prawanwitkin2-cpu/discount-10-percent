@@ -1,6 +1,61 @@
 # Project Status — Discount 10 Percent
 
-อัปเดตล่าสุด: 27 พฤษภาคม 2026 เวลา 23:45
+อัปเดตล่าสุด: 28 พฤษภาคม 2026 เวลา 12:50
+
+---
+
+## โฟกัสปัจจุบัน
+
+Cleanup โปรเจกต์เสร็จสมบูรณ์แล้ว  
+โครงสร้างไฟล์ถูก simplify ให้เหลือเฉพาะที่ใช้งานจริง
+
+---
+
+## สถานะล่าสุด
+
+### ✅ เสร็จสมบูรณ์แล้ว
+
+- โครงสร้างฐานข้อมูล: `admins`, `departments`, `branches`, `discount_records`, `admin_audit_logs`
+- ระบบ Admin Login ด้วย Google OAuth2 (GoogleAuthController, GoogleAuthService)
+- CSRF Token ทุกฟอร์ม POST
+- Admin Panel: Dashboard, Records (ตาราง + filter), Reports (สถิติ), Departments (CRUD)
+- UX/UI Revamp ทั้งระบบ (ฟอนต์ Outfit, CSS Variables, Micro-animations, Responsive)
+- Cleanup โปรเจกต์: ลบไฟล์/โฟลเดอร์ที่ไม่จำเป็นออกแล้ว
+
+---
+
+## ไฟล์ที่ถูกลบใน Cleanup (28 พ.ค. 2026)
+
+| ไฟล์/โฟลเดอร์ | เหตุผล |
+|--------------|--------|
+| `app/Repositories/` | โฟลเดอร์เปล่า |
+| `app/Middleware/` | โฟลเดอร์เปล่า |
+| `tests/` | โฟลเดอร์เปล่า |
+| `storage/backups/` | โฟลเดอร์เปล่า |
+| `test_session.php` | debug file ชั่วคราว |
+| `scripts/fix_thai_seed.php` | script แก้ปัญหาชั่วคราว |
+| `scripts/` | โฟลเดอร์ว่างหลังลบไฟล์ |
+| `app/validator.php` | class ไม่มีไฟล์ไหนใช้จริง |
+| `AGENTS.md` | เอกสาร AI operating rules |
+| `.windsurfrules` | config editor |
+| `GOOGLE_AUTH_SETUP.md` | เอกสารประกอบการตั้งค่า |
+
+---
+
+## Blockers / ปัญหาที่พบ
+
+### ✅ แก้แล้ว: CSRF Token หมดอายุบน localhost
+- **อาการ**: หน้าขาว "Invalid CSRF Token" เวลา Submit ฟอร์ม
+- **สาเหตุ**: `session_set_cookie_params` ที่มี `samesite: Lax` บล็อก Cookie บน localhost
+- **แก้**: คอมเมนต์ `session_set_cookie_params` ออกใน `app/bootstrap.php`
+
+---
+
+## ขั้นตอนต่อไป (Next Steps)
+
+1. **ทดสอบ End-to-End**: ทดสอบฟอร์ม Public, Login Admin ด้วย Google, ดูสถิติ
+2. **เตรียม Production**: ตั้งค่า Server จริง, เปิด Session Cookie Security กลับ, เปลี่ยน `.env`
+
 
 ---
 
